@@ -16,15 +16,29 @@ const bcrypt = require('bcryptjs');
 
 const app = express();
 
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const normalizeOrigin = (origin = '') => origin.trim().replace(/\/$/, '');
+
+const allowedOrigins = new Set(
+  (process.env.CLIENT_URL || 'http://localhost:3000')
+    .split(',')
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean)
+);
+
+const originRegex = process.env.CLIENT_URL_REGEX
+  ? new RegExp(process.env.CLIENT_URL_REGEX)
+  : null;
 
 const corsOptions = {
   origin(origin, callback) {
+    const normalizedOrigin = normalizeOrigin(origin || '');
+
     // Allow non-browser clients (no Origin header) and configured frontends.
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (
+      !origin ||
+      allowedOrigins.has(normalizedOrigin) ||
+      originRegex?.test(normalizedOrigin)
+    ) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
