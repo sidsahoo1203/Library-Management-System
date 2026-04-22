@@ -7,6 +7,7 @@ import IssuedBooks from './pages/IssuedBooks';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MyBooks from './pages/MyBooks';
+import StudentList from './pages/StudentList';
 import { verifyAuth } from './api/api';
 
 const ProtectedRoute = ({ user, requiredRole, children }) => {
@@ -78,6 +79,9 @@ const App = () => {
               <NavLink to="/books" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-icon">📖</span> Manage Catalog
               </NavLink>
+              <NavLink to="/students" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                <span className="nav-icon">👨‍🎓</span> Students
+              </NavLink>
               <NavLink to="/add-book" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-icon">➕</span> Add New Book
               </NavLink>
@@ -135,12 +139,13 @@ const App = () => {
           {/* Admin Routes */}
           <Route path="/" element={<ProtectedRoute user={user}><Dashboard user={user} /></ProtectedRoute>} />
           <Route path="/books" element={<ProtectedRoute user={user}><BookList user={user} /></ProtectedRoute>} />
+          <Route path="/students" element={<ProtectedRoute user={user} requiredRole="admin"><StudentList /></ProtectedRoute>} />
           <Route path="/add-book" element={<ProtectedRoute user={user} requiredRole="admin"><AddBook /></ProtectedRoute>} />
           <Route path="/edit-book/:id" element={<ProtectedRoute user={user} requiredRole="admin"><AddBook /></ProtectedRoute>} />
           <Route path="/issued" element={<ProtectedRoute user={user} requiredRole="admin"><IssuedBooks /></ProtectedRoute>} />
           
           {/* Student Routes */}
-          <Route path="/my-books" element={<ProtectedRoute user={user} requiredRole="student"><MyBooks /></ProtectedRoute>} />
+          <Route path="/my-books" element={<ProtectedRoute user={user} requiredRole="student"><MyBooks user={user} /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

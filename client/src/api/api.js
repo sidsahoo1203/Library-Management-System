@@ -19,6 +19,9 @@ export const loginStudent = (credentials) => API.post('/auth/student/login', cre
 export const registerStudent = (data) => API.post('/auth/student/register', data);
 export const verifyAuth = () => API.get('/auth/verify');
 
+// ── Admin API calls ─────────────────────────────────────────
+export const getAllStudents = () => API.get('/students');
+
 // ── Book API ──────────────────────────────────────────────
 export const getAllBooks = ({ search = '', availability = '', page = 1, limit = 10 } = {}) =>
   API.get('/books', { params: { search, availability, page, limit } });

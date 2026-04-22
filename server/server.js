@@ -11,8 +11,10 @@ require('dotenv').config();
 const bookRoutes = require('./routes/bookRoutes');
 const issueRoutes = require('./routes/issueRoutes');
 const authRoutes = require('./routes/authRoutes');
+const studentRoutes = require('./routes/studentRoutes');
 const Admin = require('./models/Admin');
 const bcrypt = require('bcryptjs');
+const morgan = require('morgan');
 
 const app = express();
 
@@ -48,6 +50,13 @@ const corsOptions = {
 // ── Middleware ───────────────────────────────────────────────
 app.use(cors(corsOptions));
 app.use(express.json());
+// Add production level request logging for monitoring
+app.use(morgan('tiny'));
+
+// ── Health Endpoint ─────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'UP', message: 'Library API is perfectly healthy.' });
+});
 
 // ── MongoDB Connection ──────────────────────────────────────
 // Mongoose connects to the MongoDB database using the URI
@@ -68,6 +77,7 @@ mongoose
 // ── API Routes ──────────────────────────────────────────────
 app.use('/auth', authRoutes);
 app.use('/books', bookRoutes);
+app.use('/students', studentRoutes);
 app.use('/', issueRoutes);
 
 // Root route – health check

@@ -88,7 +88,8 @@ router.post('/student/login', async (req, res) => {
 
     const payload = {
       id: student._id,
-      role: 'student'
+      role: 'student',
+      name: student.name
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
