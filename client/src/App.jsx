@@ -93,11 +93,11 @@ const App = () => {
 
           {user?.role === 'student' && (
             <>
-              <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <NavLink to="/books" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-icon">📖</span> Access Catalog
               </NavLink>
               <NavLink to="/my-books" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <span className="nav-icon">📚</span> My Issued Books
+                <span className="nav-icon">📚</span> My Dashboard
               </NavLink>
             </>
           )}
@@ -136,8 +136,13 @@ const App = () => {
           <Route path="/login" element={user ? <Navigate to="/" /> : <Login setUser={setUser} />} />
           <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
           
-          {/* Admin Routes */}
-          <Route path="/" element={<ProtectedRoute user={user}><Dashboard user={user} /></ProtectedRoute>} />
+          {/* Dynamic Root Route */}
+          <Route path="/" element={
+            <ProtectedRoute user={user}>
+              {user?.role === 'admin' ? <Dashboard user={user} /> : <Navigate to="/my-books" replace />}
+            </ProtectedRoute>
+          } />
+          
           <Route path="/books" element={<ProtectedRoute user={user}><BookList user={user} /></ProtectedRoute>} />
           <Route path="/students" element={<ProtectedRoute user={user} requiredRole="admin"><StudentList /></ProtectedRoute>} />
           <Route path="/add-book" element={<ProtectedRoute user={user} requiredRole="admin"><AddBook /></ProtectedRoute>} />
