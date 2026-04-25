@@ -4,14 +4,22 @@ const Stripe = require('stripe');
 const Issue = require('../models/Issue');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
-// Initialize Stripe with environment variable for security.
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe with environment variable check
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+} else {
+  console.warn('⚠️ STRIPE_SECRET_KEY is missing. Payments will be disabled.');
+}
 
 // ────────────────────────────────────────────────────────────
 // CREATE CHECKOUT SESSION — POST /payment/create-checkout-session
 // ────────────────────────────────────────────────────────────
 router.post('/create-checkout-session', authMiddleware, async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(503).json({ success: false, message: 'Payment gateway is currently offline. Please contact admin.' });
+    }
     const { issueId } = req.body;
     const issue = await Issue.findById(issueId).populate('bookId');
 
