@@ -138,8 +138,17 @@ const BookList = ({ user }) => {
                   {books.map((book) => (
                     <tr key={book._id}>
                       <td>
-                        <strong className="text-accent" style={{ display: 'block', marginBottom: '4px', fontSize: '15px' }}>{book.title}</strong>
-                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>by {book.author}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                          {book.coverImageUrl ? (
+                            <img src={book.coverImageUrl} alt="Cover" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px', boxShadow: 'var(--shadow-sm)' }} />
+                          ) : (
+                            <div style={{ width: '40px', height: '60px', background: 'var(--bg-color)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📘</div>
+                          )}
+                          <div>
+                            <strong className="text-accent" style={{ display: 'block', marginBottom: '4px', fontSize: '15px' }}>{book.title}</strong>
+                            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>by {book.author}</span>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <span style={{ display: 'block', marginBottom: '4px' }}>{book.category}</span>
@@ -159,9 +168,19 @@ const BookList = ({ user }) => {
                               <button className="btn btn-sm btn-danger" onClick={() => handleDelete(book._id)}>Delete</button>
                             </>
                           ) : (
-                            <button className="btn btn-sm btn-primary" disabled={book.availableCopies === 0} onClick={() => handleStudentRequest(book._id)}>
-                              Request Book
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {book.pdfUrl && (
+                                <a href={book.pdfUrl} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ background: '#10b981', color: 'white' }}>
+                                  Read E-Book
+                                </a>
+                              )}
+                              <button 
+                                className={`btn btn-sm ${book.availableCopies === 0 ? 'btn-outline' : 'btn-primary'}`} 
+                                onClick={() => handleStudentRequest(book._id)}
+                              >
+                                {book.availableCopies === 0 ? 'Join Waitlist' : 'Request Book'}
+                              </button>
+                            </div>
                           )}
                         </div>
                       </td>

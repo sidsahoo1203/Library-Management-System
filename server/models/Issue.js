@@ -44,6 +44,14 @@ const issueSchema = new mongoose.Schema(
     fineAmount: {
       type: Number,
       default: 0
+    },
+    stripeSessionId: {
+      type: String,
+      default: null
+    },
+    reminderSent: {
+      type: Boolean,
+      default: false
     }
   },
   {

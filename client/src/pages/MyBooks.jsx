@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getMyIssuedBooks } from '../api/api';
+import { useSearchParams } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
+import { getMyIssuedBooks, payFine } from '../api/api';
 
 const MyBooks = ({ user }) => {
   const [myRecords, setMyRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [alert, setAlert] = useState(null);
 
   // Derived stats
   const pendingRequests = myRecords.filter(r => r.status === 'Pending').length;
@@ -22,7 +26,27 @@ const MyBooks = ({ user }) => {
       }
     };
     fetchMyRecords();
-  }, []);
+
+    // Check URL for payment success callback
+    if (searchParams.get('payment') === 'success') {
+      setAlert({ type: 'success', msg: 'Payment successful! Your fine has been cleared.' });
+      setSearchParams({}); // Clear url
+    } else if (searchParams.get('payment') === 'cancelled') {
+      setAlert({ type: 'error', msg: 'Payment was cancelled.' });
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
+
+  const handlePayFine = async (issueId) => {
+    try {
+      const res = await payFine(issueId);
+      if (res.data.url) {
+        window.location.href = res.data.url; // Redirect to Stripe
+      }
+    } catch (error) {
+      setAlert({ type: 'error', msg: 'Failed to initiate payment gateway.' });
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return '—';
@@ -33,10 +57,23 @@ const MyBooks = ({ user }) => {
 
   return (
     <div>
-      <header className="page-header">
-        <h2>Welcome, {user?.name || 'Student'} 👋</h2>
-        <p>This is your personal dashboard. Monitor your active checkouts, track due dates, and view your reading history.</p>
+      <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h2>Welcome, {user?.name || 'Student'} 👋</h2>
+          <p>This is your personal dashboard. Monitor your active checkouts, track due dates, and view your reading history.</p>
+        </div>
+        <div style={{ background: 'white', padding: '10px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
+          <QRCodeSVG value={user?._id || 'unknown'} size={90} />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', fontWeight: 'bold' }}>Digital ID Card</span>
+        </div>
       </header>
+
+      {alert && (
+        <div className={`alert alert-${alert.type}`} style={{ marginBottom: '20px' }}>
+          {alert.type === 'success' ? '✅' : '❌'} {alert.msg}
+          <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }} onClick={() => setAlert(null)}>✕</button>
+        </div>
+      )}
 
       {/* ── Student Key Metrics ──────────────────────── */}
       <div className="stats-grid" style={{ marginBottom: '40px' }}>
@@ -100,9 +137,14 @@ const MyBooks = ({ user }) => {
                       ) : '—'}
                     </td>
                     <td>
-                      {record.fineAmount > 0 
-                        ? <span style={{ color: 'var(--danger-color)', fontWeight: 'bold' }}>${record.fineAmount}</span> 
-                        : <span style={{ color: 'var(--text-muted)' }}>$0</span>}
+                      {record.fineAmount > 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ color: 'var(--danger-color)', fontWeight: 'bold' }}>${record.fineAmount}</span>
+                          <button className="btn btn-sm btn-primary" onClick={() => handlePayFine(record._id)}>Pay Now</button>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>$0</span>
+                      )}
                     </td>
                     <td>
                       <span className={`badge badge-${record.status.toLowerCase()}`}>

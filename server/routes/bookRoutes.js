@@ -5,8 +5,54 @@
 
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const Book = require('../models/Book');
 const { authMiddleware, requireAdmin } = require('../middleware/authMiddleware');
+
+// ────────────────────────────────────────────────────────────
+// MULTER CONFIGURATION FOR PDF UPLOADS
+// ────────────────────────────────────────────────────────────
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'application/pdf') {
+    cb(null, true);
+  } else {
+    cb(new Error('Not a PDF! Please upload only PDF files.'), false);
+  }
+};
+
+const upload = multer({ storage, fileFilter });
+
+// ────────────────────────────────────────────────────────────
+// UPLOAD PDF — POST /books/upload
+// ────────────────────────────────────────────────────────────
+router.post('/upload', authMiddleware, requireAdmin, upload.single('pdf'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+    
+    // Construct the URL to serve the file
+    const fileUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/${req.file.filename}`;
+    
+    res.status(200).json({
+      success: true,
+      message: 'PDF uploaded successfully',
+      pdfUrl: fileUrl,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
+  }
+});
 
 // ────────────────────────────────────────────────────────────
 // CREATE — POST /books

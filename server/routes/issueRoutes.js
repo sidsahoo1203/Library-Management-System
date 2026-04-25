@@ -53,8 +53,8 @@ router.post('/request', authMiddleware, requireStudent, async (req, res) => {
     const { bookId } = req.body;
 
     const book = await Book.findById(bookId);
-    if (!book || book.availableCopies <= 0) {
-      return res.status(400).json({ success: false, message: 'Book not available' });
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'Book not found' });
     }
 
     // Check if student already requested or issued this book
@@ -66,6 +66,17 @@ router.post('/request', authMiddleware, requireStudent, async (req, res) => {
 
     if (existingIssue) {
       return res.status(400).json({ success: false, message: 'You already requested or have this book.' });
+    }
+
+    // If no copies, push to waitlist
+    if (book.availableCopies <= 0) {
+      // Check if already in waitlist
+      const inWaitlist = book.waitlist.some(w => w.studentId.toString() === req.user.id);
+      if (inWaitlist) return res.status(400).json({ success: false, message: 'You are already on the waitlist.' });
+
+      book.waitlist.push({ studentId: req.user.id });
+      await book.save();
+      return res.status(201).json({ success: true, message: 'No copies left. You have been added to the waitlist!' });
     }
 
     const student = await Student.findById(req.user.id);
@@ -126,8 +137,31 @@ router.put('/status/:id', authMiddleware, requireAdmin, async (req, res) => {
       }
       
       await issue.save();
-      await Book.findByIdAndUpdate(issue.bookId, { $inc: { availableCopies: 1 } });
-      return res.status(200).json({ success: true, message: 'Book returned', fine: issue.fineAmount });
+
+      // WAITLIST AUTOMATION
+      const book = await Book.findById(issue.bookId);
+      if (book.waitlist && book.waitlist.length > 0) {
+        // Pop the first student from waitlist
+        const nextInLine = book.waitlist.shift();
+        
+        const student = await Student.findById(nextInLine.studentId);
+        
+        // Auto-create a pending request for them
+        const newIssue = new Issue({
+          bookId: book._id,
+          studentId: student._id,
+          studentName: student.name,
+          status: 'Pending'
+        });
+        await newIssue.save();
+        await book.save(); // waitlist is updated, copies stay 0
+
+        return res.status(200).json({ success: true, message: 'Book returned. Automatically assigned to next student on waitlist!', fine: issue.fineAmount });
+      } else {
+        book.availableCopies += 1;
+        await book.save();
+        return res.status(200).json({ success: true, message: 'Book returned successfully', fine: issue.fineAmount });
+      }
     
     } else if (action === 'resolve-fine') {
       issue.fineAmount = 0;

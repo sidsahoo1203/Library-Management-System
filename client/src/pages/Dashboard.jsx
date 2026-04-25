@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { getAllBooks, getAllIssued } from '../api/api';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import ScannerModal from '../components/ScannerModal';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({ totalBooks: 0, available: 0, issuedTotal: 0, pendingRequests: 0, totalFines: 0 });
   const [categoryData, setCategoryData] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showScanner, setShowScanner] = useState(false);
+  const navigate = useNavigate();
 
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -60,12 +64,26 @@ const Dashboard = () => {
     return <div className="loading-wrap"><div className="spinner"></div><p>Aggregating university data...</p></div>;
   }
 
+  const handleScanSuccess = (studentId) => {
+    setShowScanner(false);
+    // In a real flow, you'd fetch the student or show a form
+    // For now we just route to student list or display it
+    alert(`Successfully Scanned Student ID: ${studentId}\nYou can now instantly issue a book to them.`);
+  };
+
   return (
     <div>
-      <header className="page-header">
-        <h2>Admin Overview</h2>
-        <p>Real-time telemetry of library catalog and student transactions.</p>
+      <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2>Admin Overview</h2>
+          <p>Real-time telemetry of library catalog and student transactions.</p>
+        </div>
+        <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowScanner(true)}>
+          📸 Quick Scan Student
+        </button>
       </header>
+
+      {showScanner && <ScannerModal onClose={() => setShowScanner(false)} onScan={handleScanSuccess} />}
 
       {/* ── Key Metrics ──────────────────────────────── */}
       <div className="stats-grid" style={{ marginBottom: '40px' }}>

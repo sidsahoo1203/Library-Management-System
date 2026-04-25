@@ -35,6 +35,20 @@ const bookSchema = new mongoose.Schema(
       required: [true, 'Available copies count is required'],
       min: [0, 'Available copies cannot be negative'],
     },
+    isbn: {
+      type: String,
+      trim: true,
+    },
+    coverImageUrl: {
+      type: String,
+    },
+    pdfUrl: {
+      type: String,
+    },
+    waitlist: [{
+      studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+      dateJoined: { type: Date, default: Date.now }
+    }],
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields automatically

@@ -20,6 +20,11 @@ const studentSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true
+    },
+    barcodeId: {
+      type: String,
+      unique: true,
+      sparse: true // allows multiple nulls if not generated yet
     }
   },
   {
