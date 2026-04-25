@@ -1,80 +1,41 @@
-# Modern Library Management System 📚
+# 📚 Libraro - Enterprise Library Management System
 
-A comprehensive, full-stack Library Management System built to handle high-level university requirements. This platform bridges the gap between scalable high-performance backend databases and beautiful, responsive frontend interfaces.
+Libraro is a full-stack, enterprise-grade Library Management System built for universities and modern institutions. It features a high-end UI/UX, robust role-based security, and advanced operational analytics.
 
-## 🌟 Key Features
+## 🚀 Key Features
 
-### 1. Dual-Role Authentication Framework
-- **Student Portal:** Students can securely register, browse the active catalog, submit requests to borrow books, and monitor their active checkouts and fines.
-- **Super-Admin Portal:** Librarians get total control over the database. They can view the total active student roster, approve/reject student book requests, edit catalog entries, manually document checkouts, and clear late fines.
+### 🔐 Multi-Portal Security
+- **Dual-Portal Entry:** Dedicated login systems for Admins and Students.
+- **Strict Role-Based Access:** Students cannot access administrative controls.
+- **JWT Authentication:** Secure, token-based session management.
 
-### 2. High-Performance RESTful API
-- Powered by **Node.js & Express.js**.
-- Structured using robust MVC architecture (`Models`, `Controllers/Routes`, `Middlewares`).
-- Security middleware utilizes **JSON Web Tokens (JWT)** and **Bcrypt hashing** to guarantee that data routes are highly secure and segmented by role.
-- Dynamic query processing enabled for advanced sorting, pagination, and regex-powered searching.
+### 📊 Operational Analytics
+- **Inventory Tracking:** Real-time monitoring of Available vs. Issued copies.
+- **Category Distribution:** Visual data on library genre density.
+- **Circulation Health:** Tracking of pending requests and overdue alerts.
 
-### 3. NoSQL Database & Relationships
-- Uses **MongoDB Atlas** remotely hosted for extreme stability.
-- Schemas strictly enforced via **Mongoose**.
-- Handles complex relational linking (e.g. associating specific `Books` with a `Student` via an `Issue` document utilizing `findById` populates).
+### 📸 Smart QR System
+- **Digital Student IDs:** Unique, auto-generated QR codes for every student.
+- **Scan-to-Issue:** Admin scanner that instantly verifies student identity via QR.
 
-### 4. "Silicon Valley" Premium User Interface
-- Built completely from scratch using **React + Vite** and Vanilla CSS Grid/Flexbox variants.
-- Deep integration of modern UI UX including Frosted Glass cards (Glassmorphism), dynamic React-Recharts data visualization, hover micro-interactions, and visual status badging.
+### 🤖 AI-Powered Experience
+- **Smart Recommendations:** Personalized book suggestions based on student borrowing history and categories.
+- **Waitlist Automation:** Intelligent queue system that auto-reserves books upon return and notifies students.
 
----
+### 💳 Digital Economy
+- **Stripe Integration:** Secure online payment system for library fines.
+- **Automated Fine Calculation:** Precision logic for calculating late penalties based on library settings.
 
-## 🚀 Getting Started
+### 📖 E-Reading Suite
+- **PDF Integration:** Direct digital reading for ebooks.
+- **Searchable Catalog:** High-performance search with pagination (12 books per page).
 
-Follow these steps to run the application perfectly on your local machine.
-
-### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/en/) installed on your computer.
-
-### 1. Set Up the Backend
-1. Open a terminal and navigate to the backend folder:
-   ```bash
-   cd server
-   ```
-2. Install the necessary packages:
-   ```bash
-   npm install
-   ```
-3. Copy the `.env.example` to create an active environment file:
-   Make sure you have a `server/.env` file with your `MONGODB_URI` and `JWT_SECRET` populated.
-4. Start the backend Node server:
-   ```bash
-   npm run dev
-   ```
-   *Note: If no admin account exists, the server will **automatically create one** using `admin@library.com` and `admin123`.*
-
-### 2. Set Up the Frontend
-1. Open a **second, separate terminal** and navigate to the frontend folder:
-   ```bash
-   cd client
-   ```
-2. Install the React packages:
-   ```bash
-   npm install
-   ```
-3. Start the Vite React Engine:
-   ```bash
-   npm run dev
-   ```
-
-### 3. Access the Project
-Your application is now live! 
-Open your web browser and go to: **[http://localhost:5173](http://localhost:5173)**
-
-**Test Credentials:**
-- **Admin:** `admin@library.com` / `admin123`
-- **Student:** Click "Register" on the main screen to create a brand new student!
+## 🛠️ Tech Stack
+- **Frontend:** React.js, Recharts, Lucide Icons
+- **Backend:** Node.js, Express.js
+- **Database:** MongoDB (Mongoose ODM)
+- **Payments:** Stripe API
+- **Deployment:** Render (Backend), Vercel (Frontend)
 
 ---
-
-## 🛠️ Technology Stack Breakdown
-- **Frontend Engine:** React, Vite, React Router DOM, Axios, Recharts
-- **Backend Architecture:** Node.js, Express.js
-- **Database Engineering:** MongoDB Atlas, Mongoose ODM
-- **Security Protocols:** JSON Web Tokens (JWT), Bcrypt, CORS, Morgan (Activity Logging)
+*Developed as a high-performance MTECH Project solution.*

@@ -12,7 +12,11 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const admin = await Admin.findOne({ email });
+    // Case-insensitive admin lookup
+    const admin = await Admin.findOne({ 
+      email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } 
+    });
+    
     if (!admin) {
       return res.status(401).json({ success: false, message: 'Invalid admin credentials' });
     }
@@ -76,7 +80,11 @@ router.post('/student/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const student = await Student.findOne({ email });
+    // Case-insensitive student lookup
+    const student = await Student.findOne({ 
+      email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } 
+    });
+
     if (!student) {
       return res.status(401).json({ success: false, message: 'Invalid student credentials' });
     }
@@ -108,7 +116,7 @@ router.post('/student/login', async (req, res) => {
 // ────────────────────────────────────────────────────────────
 // VERIFY TOKEN — GET /auth/verify
 // ────────────────────────────────────────────────────────────
-router.get('/verify', (req, res) => {
+router.get('/verify', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'No token provided' });
@@ -117,9 +125,59 @@ router.get('/verify', (req, res) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.status(200).json({ success: true, user: decoded }); // Returns { id: ..., role: ... }
+    
+    // Fetch actual user data to include name in the response
+    let userDoc;
+    if (decoded.role === 'admin') {
+      userDoc = await Admin.findById(decoded.id);
+    } else {
+      userDoc = await Student.findById(decoded.id);
+    }
+
+    if (!userDoc) return res.status(401).json({ success: false, message: 'User no longer exists' });
+
+    res.status(200).json({ 
+      success: true, 
+      user: { 
+        id: decoded.id, 
+        role: decoded.role, 
+        name: userDoc.name 
+      } 
+    });
   } catch (err) {
     res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// CHANGE PASSWORD — PUT /auth/change-password
+// ────────────────────────────────────────────────────────────
+const { authMiddleware } = require('../middleware/authMiddleware');
+
+router.put('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    let user;
+    if (req.user.role === 'admin') {
+      user = await Admin.findById(req.user.id);
+    } else {
+      user = await Student.findById(req.user.id);
+    }
+
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(401).json({ success: false, message: 'Current password incorrect' });
+
+    // Hash and save new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update password', error: error.message });
   }
 });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { addBook, getBookById, updateBook } from '../api/api';
+import { addBook, getBookById, updateBook, uploadPdf } from '../api/api';
 
 const AddBook = () => {
   const { id } = useParams();
@@ -13,7 +13,14 @@ const AddBook = () => {
     category: '',
     publishedYear: new Date().getFullYear(),
     availableCopies: 1,
+    isbn: '',
+    coverImageUrl: '',
+    pdfUrl: ''
   });
+
+  const [pdfFile, setPdfFile] = useState(null);
+  const [isbnSearch, setIsbnSearch] = useState('');
+  const [isSearchingIsbn, setIsSearchingIsbn] = useState(false);
 
   const [loading, setLoading] = useState(isEditMode);
   const [error, setError] = useState('');
@@ -31,6 +38,9 @@ const AddBook = () => {
             category: book.category,
             publishedYear: book.publishedYear,
             availableCopies: book.availableCopies,
+            isbn: book.isbn || '',
+            coverImageUrl: book.coverImageUrl || '',
+            pdfUrl: book.pdfUrl || ''
           });
         } catch (err) {
           setError('Failed to load book details');
@@ -50,16 +60,68 @@ const AddBook = () => {
     }));
   };
 
+  const handleIsbnSearch = async () => {
+    if (!isbnSearch) return;
+    setIsSearchingIsbn(true);
+    setError('');
+    
+    // Clean the ISBN (remove dashes and spaces)
+    const cleanIsbn = isbnSearch.replace(/[- ]/g, '');
+
+    try {
+      // Switched to OpenLibrary API
+      const response = await fetch(`https://openlibrary.org/search.json?q=${cleanIsbn}`);
+      const data = await response.json();
+      
+      if (data.docs && data.docs.length > 0) {
+        const bookInfo = data.docs[0];
+        
+        // OpenLibrary structures covers by cover_i ID
+        const coverUrl = bookInfo.cover_i 
+          ? `https://covers.openlibrary.org/b/id/${bookInfo.cover_i}-L.jpg` 
+          : '';
+
+        setFormData(prev => ({
+          ...prev,
+          title: bookInfo.title || prev.title,
+          author: bookInfo.author_name ? bookInfo.author_name.join(', ') : prev.author,
+          category: bookInfo.subject ? bookInfo.subject[0] : prev.category,
+          publishedYear: bookInfo.first_publish_year || prev.publishedYear,
+          isbn: cleanIsbn,
+          coverImageUrl: coverUrl
+        }));
+      } else {
+        setError('No book found with this ISBN. Please check the number.');
+      }
+    } catch (err) {
+      setError('Failed to fetch book data from API.');
+    } finally {
+      setIsSearchingIsbn(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
 
     try {
+      let finalFormData = { ...formData };
+      
+      // If a PDF file was selected, upload it first
+      if (pdfFile) {
+        const fileData = new FormData();
+        fileData.append('pdf', pdfFile);
+        const uploadRes = await uploadPdf(fileData);
+        if (uploadRes.data.success && uploadRes.data.pdfUrl) {
+          finalFormData.pdfUrl = uploadRes.data.pdfUrl;
+        }
+      }
+
       if (isEditMode) {
-        await updateBook(id, formData);
+        await updateBook(id, finalFormData);
       } else {
-        await addBook(formData);
+        await addBook(finalFormData);
       }
       navigate('/books');
     } catch (err) {
@@ -88,6 +150,18 @@ const AddBook = () => {
       <div className="card" style={{ maxWidth: '800px' }}>
         <h3 className="card-title">{isEditMode ? 'Modify Book Details' : 'Book Details'}</h3>
         
+        {!isEditMode && (
+          <div style={{ marginBottom: '25px', padding: '15px', background: 'var(--bg-color)', borderRadius: 'var(--radius)', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+              <label>Magic ISBN Auto-Fill 🪄</label>
+              <input type="text" placeholder="Enter ISBN (e.g., 9780141182636)" value={isbnSearch} onChange={(e) => setIsbnSearch(e.target.value)} />
+            </div>
+            <button type="button" className="btn btn-primary" onClick={handleIsbnSearch} disabled={isSearchingIsbn}>
+              {isSearchingIsbn ? 'Searching...' : 'Fetch Metadata'}
+            </button>
+          </div>
+        )}
+
         {error && <div className="alert alert-error">❌ {error}</div>}
 
         <form onSubmit={handleSubmit}>
@@ -163,6 +237,29 @@ const AddBook = () => {
                 onChange={handleChange}
               />
             </div>
+
+            <div className="form-group full-width">
+              <label htmlFor="pdfFile">Upload Digital E-Book (PDF) <span style={{color:'var(--text-muted)'}}>- Optional</span></label>
+              <input
+                type="file"
+                id="pdfFile"
+                accept="application/pdf"
+                onChange={(e) => setPdfFile(e.target.files[0])}
+                style={{ padding: '10px', background: 'white', border: '1px dashed var(--border-color)', width: '100%' }}
+              />
+              {formData.pdfUrl && !pdfFile && (
+                <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--success-color)' }}>
+                  ✅ Current E-Book uploaded: <a href={formData.pdfUrl} target="_blank" rel="noreferrer">View PDF</a>
+                </div>
+              )}
+            </div>
+
+            {formData.coverImageUrl && (
+              <div className="form-group full-width" style={{ display: 'flex', gap: '15px', alignItems: 'center', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                <img src={formData.coverImageUrl} alt="Book Cover" style={{ height: '80px', borderRadius: '4px', boxShadow: 'var(--shadow-sm)' }} />
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cover image fetched successfully.</div>
+              </div>
+            )}
           </div>
 
           <div className="modal-actions" style={{ marginTop: '32px' }}>

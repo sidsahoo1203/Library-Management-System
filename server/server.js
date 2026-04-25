@@ -12,9 +12,12 @@ const bookRoutes = require('./routes/bookRoutes');
 const issueRoutes = require('./routes/issueRoutes');
 const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const settingRoutes = require('./routes/settingRoutes');
 const Admin = require('./models/Admin');
 const bcrypt = require('bcryptjs');
 const morgan = require('morgan');
+const startCronJobs = require('./cron/mailer');
 
 const app = express();
 
@@ -53,6 +56,10 @@ app.use(express.json());
 // Add production level request logging for monitoring
 app.use(morgan('tiny'));
 
+// Serve PDF E-Books statically
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // ── Health Endpoint ─────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', message: 'Library API is perfectly healthy.' });
@@ -65,6 +72,7 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('✅ Connected to MongoDB successfully');
+    startCronJobs();
     const adminExists = await Admin.findOne({ email: 'admin@library.com' });
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -78,6 +86,8 @@ mongoose
 app.use('/auth', authRoutes);
 app.use('/books', bookRoutes);
 app.use('/students', studentRoutes);
+app.use('/payment', paymentRoutes);
+app.use('/settings', settingRoutes);
 app.use('/', issueRoutes);
 
 // Root route – health check

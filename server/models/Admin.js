@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 
 const adminSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+      default: 'Head Librarian'
+    },
     email: {
       type: String,
       required: true,

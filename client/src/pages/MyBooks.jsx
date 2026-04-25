@@ -1,126 +1,139 @@
 import React, { useState, useEffect } from 'react';
-import { getMyIssuedBooks } from '../api/api';
+import { getMyIssuedBooks, payFine, renewBook } from '../api/api';
+import { QRCodeSVG } from 'qrcode.react';
 
-const MyBooks = ({ user }) => {
-  const [myRecords, setMyRecords] = useState([]);
+const MyBooks = () => {
+  const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [alert, setAlert] = useState(null);
 
-  // Derived stats
-  const pendingRequests = myRecords.filter(r => r.status === 'Pending').length;
-  const activeIssues = myRecords.filter(r => r.status === 'Issued').length;
-  const totalFines = myRecords.reduce((acc, curr) => acc + (curr.fineAmount || 0), 0);
+  let user = null;
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr && userStr !== 'undefined') {
+      user = JSON.parse(userStr);
+    }
+  } catch (e) {
+    console.error("Failed to parse user");
+  }
 
   useEffect(() => {
-    const fetchMyRecords = async () => {
-      try {
-        const res = await getMyIssuedBooks();
-        setMyRecords(res.data.data);
-      } catch (error) {
-        console.error("Error fetching personal records:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMyRecords();
+    fetchIssues();
   }, []);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric'
-    });
+  const fetchIssues = async () => {
+    try {
+      const res = await getMyIssuedBooks();
+      setIssues(res.data.data || []);
+    } catch (err) {
+      console.error('Issues fetch error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div>
-      <header className="page-header">
-        <h2>Welcome, {user?.name || 'Student'} 👋</h2>
-        <p>This is your personal dashboard. Monitor your active checkouts, track due dates, and view your reading history.</p>
-      </header>
+  const handleRenew = async (id) => {
+    try {
+      setIsRenewing(true);
+      const res = await renewBook(id);
+      setAlert({ type: 'success', msg: res.data.message });
+      fetchIssues();
+    } catch (err) {
+      setAlert({ type: 'error', msg: err.response?.data?.message || 'Failed' });
+    } finally {
+      setIsRenewing(false);
+    }
+  };
 
-      {/* ── Student Key Metrics ──────────────────────── */}
-      <div className="stats-grid" style={{ marginBottom: '40px' }}>
-        <div className="stat-card green">
-          <div className="stat-icon" style={{ color: 'var(--success-color)', background: 'var(--bg-color)' }}>📚</div>
-          <div className="stat-label">Active Checked Out</div>
-          <div className="stat-value">{activeIssues}</div>
+  if (loading) return <div className="loading-wrap"><div className="spinner"></div></div>;
+
+  return (
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      
+      {/* ── HEADER ────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+        <div>
+          <h2 style={{ fontSize: '26px', fontWeight: '800', margin: 0 }}>Welcome, {user?.name || 'Student'} 👋</h2>
+          <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '13px' }}>Your library dashboard.</p>
         </div>
-        <div className="stat-card amber">
-          <div className="stat-icon" style={{ color: 'var(--warning-color)', background: 'var(--bg-color)' }}>⏳</div>
-          <div className="stat-label">Pending Requests</div>
-          <div className="stat-value">{pendingRequests}</div>
-        </div>
-        <div className="stat-card red">
-          <div className="stat-icon" style={{ color: 'var(--danger-color)', background: 'var(--bg-color)' }}>💰</div>
-          <div className="stat-label">Unpaid Fines</div>
-          <div className="stat-value">${totalFines}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '8px 15px', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontWeight: '700', fontSize: '12px' }}>Digital ID</div>
+            <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{user?.id?.slice(-6).toUpperCase()}</div>
+          </div>
+          <QRCodeSVG value={user?.email || 'error'} size={35} />
         </div>
       </div>
 
-      <h3 style={{ marginBottom: '20px' }}>My Library Record</h3>
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {loading ? (
-          <div className="loading-wrap" style={{ padding: '60px' }}>
-            <div className="spinner"></div>
-            <p>Loading your profile...</p>
+      {alert && (
+        <div className={`alert alert-${alert.type}`} style={{ marginBottom: '20px', padding: '12px' }}>
+          {alert.type === 'success' ? '✅' : '❌'} {alert.msg}
+        </div>
+      )}
+
+      {/* ── COMPACT STATS ─────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+        {[
+          { label: 'Active Books', value: issues.filter(i => i.status === 'Issued').length, color: 'blue', icon: '📚' },
+          { label: 'Requests', value: issues.filter(i => i.status === 'Pending').length, color: 'amber', icon: '⏳' },
+          { label: 'Fines Due', value: `$${issues.reduce((a, c) => a + (c.fineAmount || 0), 0)}`, color: 'red', icon: '💰' }
+        ].map((s, i) => (
+          <div key={i} className={`stat-card ${s.color}`} style={{ padding: '15px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '20px', background: 'rgba(255,255,255,0.2)', padding: '8px', borderRadius: '8px' }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize: '11px', opacity: 0.9, fontWeight: '600' }}>{s.label}</div>
+              <div style={{ fontSize: '20px', fontWeight: '800' }}>{s.value}</div>
+            </div>
           </div>
-        ) : myRecords.length > 0 ? (
-          <div className="table-wrapper" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
-            <table style={{ margin: 0 }}>
-              <thead>
-                <tr>
-                  <th>Book Details</th>
-                  <th>Request / Issue Date</th>
-                  <th>Due Date</th>
-                  <th>Fine/Debt</th>
-                  <th>Current Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myRecords.map((record) => (
-                  <tr key={record._id}>
+        ))}
+      </div>
+
+      {/* ── ACTIVITY TABLE ────────────────────────────────── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <h4 style={{ marginBottom: '15px', fontSize: '15px' }}>Recent Activity</h4>
+        <div className="table-wrapper">
+          <table style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Book</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th style={{ textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {issues.length > 0 ? (
+                issues.map(issue => (
+                  <tr key={issue._id}>
                     <td>
-                      <div>
-                        <strong className="text-accent" style={{ display: 'block' }}>{record.bookId?.title || 'Unknown'}</strong>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>by {record.bookId?.author}</div>
+                      <div style={{ fontWeight: '700', fontSize: '13px' }}>{issue.bookId?.title || 'Book Title'}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{issue.bookId?.author}</div>
+                    </td>
+                    <td><span className={`badge badge-${issue.status.toLowerCase()}`} style={{ fontSize: '10px' }}>{issue.status}</span></td>
+                    <td style={{ fontWeight: '600', fontSize: '12px' }}>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : '-'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        {issue.status === 'Issued' && (
+                          <button className="btn btn-primary btn-sm" style={{ padding: '4px 10px', fontSize: '11px', background: 'var(--warning-color)', border: 'none' }} onClick={() => handleRenew(issue._id)} disabled={isRenewing}>
+                            {isRenewing ? '⏳' : '🔄 Renew'}
+                          </button>
+                        )}
+                        {issue.fineAmount > 0 && (
+                          <button className="btn btn-primary btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => alert('Proceed to payment')}>Pay Fine</button>
+                        )}
                       </div>
                     </td>
-                    <td>
-                      {record.status === 'Pending' ? (
-                        <span className="text-muted" style={{ fontStyle: 'italic', fontSize: '13px' }}>Requested: {formatDate(record.createdAt)}</span>
-                      ) : (
-                        <span>{formatDate(record.issueDate)}</span>
-                      )}
-                    </td>
-                    <td>
-                      {record.status === 'Issued' ? (
-                        <span style={{ color: new Date(record.dueDate) < new Date() ? 'var(--danger-color)' : 'inherit', fontWeight: new Date(record.dueDate) < new Date() ? '600' : 'normal' }}>
-                          {formatDate(record.dueDate)}
-                        </span>
-                      ) : '—'}
-                    </td>
-                    <td>
-                      {record.fineAmount > 0 
-                        ? <span style={{ color: 'var(--danger-color)', fontWeight: 'bold' }}>${record.fineAmount}</span> 
-                        : <span style={{ color: 'var(--text-muted)' }}>$0</span>}
-                    </td>
-                    <td>
-                      <span className={`badge badge-${record.status.toLowerCase()}`}>
-                        {record.status}
-                      </span>
-                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="empty-state" style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div className="empty-icon" style={{ fontSize: '48px', marginBottom: '15px' }}>📖</div>
-            <h3 style={{ marginBottom: '10px' }}>Your shelf is empty</h3>
-            <p className="text-muted">Head over to the Catalog to request your first book!</p>
-          </div>
-        )}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: 'center', padding: '30px', fontSize: '12px', color: 'var(--text-muted)' }}>No recent activity.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

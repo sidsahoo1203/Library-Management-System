@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllIssued, handleIssueAction } from '../api/api';
+import { getAllIssued, handleIssueAction, deleteIssueRecord } from '../api/api';
 
 const IssuedBooks = () => {
   const [issuedRecords, setIssuedRecords] = useState([]);
@@ -29,6 +29,18 @@ const IssuedBooks = () => {
       fetchIssuedRecords();
     } catch (error) {
       setAlert({ type: 'error', msg: error.response?.data?.message || `Failed to ${actionLabel}` });
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Wipe this record permanently? This cannot be undone.')) {
+      try {
+        await deleteIssueRecord(id);
+        setAlert({ type: 'success', msg: 'Record deleted successfully.' });
+        fetchIssuedRecords();
+      } catch (error) {
+        setAlert({ type: 'error', msg: 'Failed to delete record.' });
+      }
     }
   };
 
@@ -78,7 +90,7 @@ const IssuedBooks = () => {
                       <div>
                         <strong className="text-accent" style={{ display: 'block' }}>{record.bookId?.title || 'Unknown Book'}</strong>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Student: {record.studentName}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Email: {record.studentId?.email}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Email: {record.studentId?.email || 'N/A'}</div>
                       </div>
                     </td>
                     <td>
@@ -100,7 +112,7 @@ const IssuedBooks = () => {
                       </span>
                     </td>
                     <td>
-                      <div className="actions-row">
+                      <div className="actions-row" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         {record.status === 'Pending' && (
                           <>
                             <button className="btn btn-sm btn-success" onClick={() => executeAction(record._id, 'approve', 'Request Approved!')}>Approve</button>
@@ -119,6 +131,16 @@ const IssuedBooks = () => {
                         {record.status === 'Rejected' && (
                           <span className="text-muted" style={{ fontSize: '12px', fontStyle: 'italic' }}>Closed</span>
                         )}
+                        
+                        {/* THE CLEANUP TRASH BUTTON */}
+                        <button 
+                          className="btn btn-outline btn-sm" 
+                          style={{ borderColor: '#fee2e2', color: '#ef4444', padding: '4px 8px' }} 
+                          title="Permanently Delete Record"
+                          onClick={() => handleDelete(record._id)}
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </td>
                   </tr>

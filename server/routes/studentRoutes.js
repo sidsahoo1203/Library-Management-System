@@ -30,4 +30,36 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
   }
 });
 
+// ────────────────────────────────────────────────────────────
+// SECURE DELETE STUDENT (Admin Only) — POST /students/:id/delete
+// Requires Admin password to confirm
+// ────────────────────────────────────────────────────────────
+router.post('/:id/delete', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { password } = req.body;
+    const studentId = req.params.id;
+
+    // 1. Verify Admin Password
+    const Admin = require('../models/Admin');
+    const bcrypt = require('bcryptjs');
+    const admin = await Admin.findById(req.user.id);
+    
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid password. Security verification failed.' });
+    }
+    
+    // 2. Proceed with deletion
+    const deletedStudent = await Student.findByIdAndDelete(studentId);
+    if (!deletedStudent) return res.status(404).json({ success: false, message: 'Student not found' });
+
+    // 3. CASCADING DELETE
+    await Issue.deleteMany({ studentId: studentId });
+
+    res.status(200).json({ success: true, message: 'Student and history deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Delete failed', error: error.message });
+  }
+});
+
 module.exports = router;

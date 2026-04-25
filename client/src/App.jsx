@@ -8,6 +8,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import MyBooks from './pages/MyBooks';
 import StudentList from './pages/StudentList';
+import Profile from './pages/Profile';
+import PaymentSuccess from './pages/PaymentSuccess';
 import { verifyAuth } from './api/api';
 
 const ProtectedRoute = ({ user, requiredRole, children }) => {
@@ -27,7 +29,10 @@ const App = () => {
       if (localStorage.getItem('token')) {
         try {
           const res = await verifyAuth();
-          setUser(res.data.user);
+          const userData = res.data.user;
+          setUser(userData);
+          // Sync to localStorage for other components
+          localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
           localStorage.removeItem('token');
           setUser(null);
@@ -42,6 +47,7 @@ const App = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     navigate('/login');
   };
@@ -97,7 +103,7 @@ const App = () => {
                 <span className="nav-icon">📖</span> Access Catalog
               </NavLink>
               <NavLink to="/my-books" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <span className="nav-icon">📚</span> My Dashboard
+                <span className="nav-icon">📚</span> Dashboard
               </NavLink>
             </>
           )}
@@ -112,6 +118,9 @@ const App = () => {
               </NavLink>
             </>
           )}
+          <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <span className="nav-icon">⚙️</span> Settings
+          </NavLink>
         </nav>
 
         <div className="sidebar-footer">
@@ -151,6 +160,10 @@ const App = () => {
           
           {/* Student Routes */}
           <Route path="/my-books" element={<ProtectedRoute user={user} requiredRole="student"><MyBooks user={user} /></ProtectedRoute>} />
+          <Route path="/payment-success" element={<ProtectedRoute user={user} requiredRole="student"><PaymentSuccess /></ProtectedRoute>} />
+
+          {/* Shared Routes */}
+          <Route path="/profile" element={<ProtectedRoute user={user}><Profile user={user} /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
